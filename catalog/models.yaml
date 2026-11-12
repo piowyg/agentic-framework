@@ -1,0 +1,43 @@
+# Framework model catalog (layer 1 of the model registry).
+# Versioned with the framework; a workspace `models.yaml` (planned) and the global config can narrow or extend it.
+#
+# alias   – name used in config (tiers, stages, review)
+# id      – passed to the harness CLI (--model)
+# efforts – allowed effort levels
+
+harnesses:
+  claude:
+    binary: claude
+    version_args: ["--version"]
+    min_version: "2.0.0"
+  codex:
+    binary: codex
+    version_args: ["--version"]
+    min_version: "0.138.0"   # permission profiles (host sandbox)
+
+models:
+  opus:
+    harness: claude
+    id: claude-opus-5-5
+    efforts: [low, medium, high, xhigh, max]
+  sonnet:
+    harness: claude
+    id: claude-sonnet-5-5
+    efforts: [low, medium, high, xhigh, max]
+  haiku:
+    harness: claude
+    id: claude-haiku-4-5-20251001
+    efforts: [low, medium, high]
+  # Codex ids from learn.chatgpt.com/docs/models (2026-10-04); the roster depends on the plan, check with `codex` → /model.
+  astra:
+    harness: codex
+    id: gpt-6-astra
+    efforts: [low, medium, high, xhigh, max, ultra]
+  sol:
+    harness: codex
+    id: gpt-6.1-sol
+    efforts: [low, medium, high, xhigh, max, ultra]
+  luna:
+    harness: codex
+    id: gpt-6-luna
+    efforts: [low, medium, high, xhigh, max]

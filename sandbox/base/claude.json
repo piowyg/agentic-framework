@@ -1,0 +1,9 @@
+{
+  "hasCompletedOnboarding": true,
+  "theme": "dark",
+  "bypassPermissionsModeAccepted": true,
+  "diffSidebarOpen": false,
+  "projects": {
+    "/workspace": { "hasTrustDialogAccepted": true, "hasCompletedProjectOnboarding": true }
+  }
+}
