@@ -61,6 +61,25 @@ describe('JUnit XML reports', () => {
     expect(casesOfFile({ path: 'src/lib/other.test.ts', name: 'AC-1 opens' }, noFile)).toEqual([]);
   });
 
+  it('Playwright names the file relative to its testDir in `classname`: matched by suffix, never by a test of another file', () => {
+    const names = (cases: TestCase[]) => cases.map((testCase) => testCase.name);
+    const playwright = parseJUnit(
+      [
+        '<testsuites><testsuite name="admin-courses.spec.ts">',
+        '<testcase classname="admin-courses.spec.ts" name="AC-1 removes a material from a course"/>',
+        '</testsuite><testsuite name="admin-reviews.spec.ts">',
+        '<testcase classname="admin-reviews.spec.ts" name="AC-1 removes a material from a course with undo"/>',
+        '</testsuite></testsuites>',
+      ].join(''),
+    );
+    const courses = { path: 'frontend/e2e/admin-courses.spec.ts', name: 'AC-1 removes a material from a course' };
+    expect(names(casesOfFile(courses, playwright))).toEqual(['AC-1 removes a material from a course']);
+    expect(names(casesOf(courses, playwright))).toEqual(['AC-1 removes a material from a course']);
+    expect(casesOfFile({ path: 'frontend/e2e/other-admin-courses.spec.ts', name: 'x' }, playwright)).toEqual([]);
+    // the test's own file is in the report without it: a same-titled test elsewhere is not it
+    expect(casesOf({ path: 'frontend/e2e/admin-courses.spec.ts', name: 'AC-1 removes a material from a course with undo' }, playwright)).toEqual([]);
+  });
+
   it('collects the reports matching the glob, never from dependencies or .git; clears them before a run', () => {
     const root = tmpDir();
     write(root, 'build/test-results/test/TEST-a.xml', GRADLE);
