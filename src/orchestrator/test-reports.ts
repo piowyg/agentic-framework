@@ -107,7 +107,9 @@ export function casesOf(test: TestRef, cases: TestCase[]): TestCase[] {
   const name = test.name.trim();
   const named = cases.filter((testCase) => `${testCase.classname} ${testCase.name.replace(/\(\)$/, '')}`.includes(name));
   const fromFile = named.filter((testCase) => fromPath(testCase, test.path));
-  return fromFile.length ? fromFile : named;
+  if (fromFile.length) return fromFile;
+  // the test's own file is in the report without it: a same-titled test of another file is not it (biolchemlab pilot, g7)
+  return casesOfFile(test, cases).length ? [] : named;
 }
 
 /** The report's cases from the test's file, whatever their names: none means no report has that file at all. */
@@ -115,12 +117,17 @@ export function casesOfFile(test: TestRef, cases: TestCase[]): TestCase[] {
   return cases.filter((testCase) => fromPath(testCase, test.path));
 }
 
+/** A script test file's name, never a Java-style class name (`com.shop.CartTest`). */
+const TEST_FILE = /\.(?:[cm]?[jt]sx?|py|rb|php)$/;
+
 function fromPath(testCase: TestCase, testPath: string): boolean {
   const normalized = testPath.replace(/\\/g, '/').replace(/^\.\//, '');
   const sameFile = (file: string) => file.endsWith(normalized) || normalized.endsWith(file);
   if (testCase.file) return sameFile(testCase.file.replace(/\\/g, '/'));
   // vitest's junit reporter names the file in `classname`
   if (testCase.classname.includes('/')) return sameFile(testCase.classname.replace(/\\/g, '/').replace(/^\.\//, ''));
+  // Playwright's names it relative to its `testDir`, often a bare file name: a suffix at a path boundary
+  if (TEST_FILE.test(testCase.classname)) return normalized === testCase.classname || normalized.endsWith(`/${testCase.classname}`);
   const className = testCase.classname.split('$')[0]!;
   if (!className || /\s/.test(className)) return false;
   const dotted = normalized.replace(/\.[^./]+$/, '').replace(/\//g, '.');
