@@ -4,7 +4,7 @@ import { parseFix } from '../contracts/index.js';
 import { writeFileSafe } from '../fsutil.js';
 import { plural } from '../plural.js';
 import type { FixArtifact } from '../contracts/schemas.js';
-import { ArtifactError } from './artifacts.js';
+import { ArtifactError, type AssetReference } from './artifacts.js';
 import type { CloneWork } from './clone-work.js';
 import { escalatedFixer } from './executors.js';
 import type { GateKeeper, GateScope } from './gatekeeper.js';
@@ -29,6 +29,9 @@ import {
   type ScopeAxis,
 } from './state.js';
 
+/** The axes that judge the change against what it must deliver, so they compare it with the referenced assets. */
+const REFERENCE_AXES: ScopeAxis[] = ['spec', 'final'];
+
 /** What a review loop works on: one group, or the whole feature before the `final` gate. */
 export interface ReviewScope {
   /** Absent for the whole feature. */
@@ -40,6 +43,8 @@ export interface ReviewScope {
   axes: Array<[ScopeAxis, Executor]>;
   /** The spec axis must assess each; empty for the whole feature. */
   acceptance: string[];
+  /** Parts of the spec's external assets the scope must match: the spec and final reviewers and the fixer read them. */
+  references?: AssetReference[];
   fixer: Executor;
   /** The scope's clone and work branch: where its sessions run, round snapshots, rollback. */
   work: CloneWork;
@@ -109,7 +114,8 @@ export class ReviewLoop {
             const frozen = since?.commit && changed ? this.frozenScope(axis, since.round, changed) : undefined;
             const reviewScope = frozen ? frozenScopeText(frozen, since!.commit!, state.set_aside ?? []) : `Review scope: the commits of this ${group ? 'group' : 'feature'} — \`git diff ${scope.base ?? scope.work.baseRef}..HEAD\`.`;
             const extra = [reviewScope, axis === 'standards' ? this.signalsText(inProgress.commit) : ''].filter(Boolean).join('\n\n');
-            done[axis] = await scope.work.review(axis, executor, { group, round, acceptance: scope.acceptance, flowFiles: scope.flowFiles, extra, frozen }, warn);
+            const references = REFERENCE_AXES.includes(axis) ? scope.references : undefined;
+            done[axis] = await scope.work.review(axis, executor, { group, round, acceptance: scope.acceptance, ...(references?.length && { references }), flowFiles: scope.flowFiles, extra, frozen }, warn);
             inProgress.reviewers = { ...inProgress.reviewers, [axis]: reviewer };
             flow.save();
           }
@@ -191,6 +197,7 @@ export class ReviewLoop {
             scope: {
               group,
               round,
+              ...(scope.references?.length && { references: scope.references }),
               extra: [
                 open.length ? `Blocking findings to fix:\n${JSON.stringify(open, null, 2)}` : '',
                 ruled.length ? `A human ruled that ${ruled.join(', ')} must be fixed: you may not dispute them again.` : '',

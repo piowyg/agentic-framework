@@ -59,6 +59,12 @@ session. The orchestrator checks the artifact (format, AC IDs) and only then sho
   threshold its estimate stayed under (or goes past twice an estimate already over one), the log, `group_done` and `agentic status` say so (a warning, nothing stops).
   The technical grill may give the order of the work in the
   spec's `## Slices` section: a prefactor first, then thin vertical slices.
+- **References** tie the work to material the spec lists under `## External assets` that the result must match (a
+  clickable prototype, a design, a sample file). The breakdown reads each one in full and records, per group or task,
+  which parts it covers and what must match (`references: [{ asset, parts, match }]`). write-tests, implement and fix
+  get those parts in their prompt to read before they start; the spec and final reviewers compare the change with them,
+  and a screen that ignores its reference is a blocking finding. A reference to an asset the spec doesn't list sends
+  the plan back; an asset no group references is a warning at the breakdown gate.
 - With `publish.stack` (on by default) the groups of one repo form a **chain**: one first group, every next one
   depends on the one before, so each PR can sit on top of the previous one. Groups in different repos run in parallel
   when `parallel_groups` > 1. With `publish.stack: false`, independent groups of one repo run in parallel too.

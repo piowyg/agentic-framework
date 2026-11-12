@@ -1,7 +1,7 @@
 import { contractText } from '../contracts/index.js';
 import { conversationLanguage, prSummaryLanguage, type Languages } from '../config/language.js';
 import { COMMITTING_KINDS, type SessionKind, type SessionMode } from '../harness/types.js';
-import type { BreakdownRules } from './artifacts.js';
+import { EXTERNAL_ASSETS, type AssetReference, type BreakdownRules } from './artifacts.js';
 
 export interface PromptContext {
   title: string;
@@ -30,6 +30,8 @@ export interface PromptContext {
   round?: number;
   /** Acceptance criteria of the group (or task) the session works on. */
   acceptance?: string[];
+  /** Parts of the spec's external assets the work must match, as the breakdown named them. */
+  references?: AssetReference[];
   notes?: string[];
   /** Run-specific input, e.g. the fixer's findings. */
   extra?: string;
@@ -75,6 +77,7 @@ export function buildPrompt(kind: SessionKind, context: PromptContext): string {
         : []),
       ...(context.acceptance?.length ? [`Acceptance criteria in scope: ${context.acceptance.join(', ')}.`] : []),
     ],
+    referencesText(kind, context.references ?? []),
     [
       context.mode === 'interactive'
         ? `Talk to the human in \`${conversation}\`; write artifacts in \`${context.language.artifacts}\`.`
@@ -119,6 +122,25 @@ export function buildPrompt(kind: SessionKind, context: PromptContext): string {
     .map((lines) => lines.filter(Boolean).join('\n'))
     .filter(Boolean)
     .join('\n\n');
+}
+
+const REVIEWING_REFERENCES: readonly SessionKind[] = ['review-spec', 'review-final'];
+
+/**
+ * The breakdown read the assets once and named the parts; each session reads only those (a 100 KB prototype
+ * read by every session would cost more than it helps). Without this, sessions ignored a prototype the spec named
+ * as the layout source (biolchemlab admin pilot, 1 of ~105 sessions opened it).
+ */
+function referencesText(kind: SessionKind, references: AssetReference[]): string[] {
+  if (!references.length) return [];
+  const precedence = 'Where a reference and the ticket or the spec disagree, the ticket and the spec win.';
+  const instruction = REVIEWING_REFERENCES.includes(kind)
+    ? `Read these parts and compare the change with them: a screen or behavior that ignores its reference is a blocking finding (\`basis: spec\`, \`ref\`: the AC it serves or \`spec:${EXTERNAL_ASSETS}\`). ${precedence}`
+    : `Read these parts before you start — they are what the result must look and behave like; open the rest of the asset only when a part points there. ${precedence}`;
+  return [
+    `Reference assets — parts of the spec's \`## ${EXTERNAL_ASSETS}\` this work must match. ${instruction}`,
+    ...references.map((reference) => `- \`${reference.asset}\` — ${reference.parts}. Must match: ${reference.match}`),
+  ];
 }
 
 function numbered(commands: string[]): string[] {

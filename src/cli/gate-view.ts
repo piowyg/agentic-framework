@@ -65,6 +65,7 @@ function renderGroup(group: Group, styles: Styles, width: number, limits?: SizeT
   for (const paragraph of [details, group.title === undefined ? '' : clean(group.rationale)].filter(Boolean)) {
     lines.push(...wrap(paragraph, width, '  ').map(styles.dim));
   }
+  for (const reference of group.references ?? []) lines.push(...wrap(`↳ ${clean(reference.asset)}: ${clean(reference.parts)}`, width, '  ').map(styles.dim));
   if (estimate && limits && overLimits(estimate.prod, estimate.tests, limits).length) {
     const over = `⚠ over the publish.size threshold (${thresholdsText(limits)})`;
     const reason = group.oversize_reason?.trim();
@@ -82,6 +83,9 @@ function renderGroup(group: Group, styles: Styles, width: number, limits?: SizeT
     lines.push(`${branch}${styles.bold(first!)}${inline ? styles.dim(acceptance) : ''}`, ...rest.map((line) => continuation + styles.bold(line)));
     if (!inline) lines.push(...wrap(task.acceptance.join(' '), width, continuation).map((line) => continuation + styles.dim(line.slice(continuation.length))));
     if (taskDetails) lines.push(...wrap(taskDetails, width, continuation).map((line) => continuation + styles.dim(line.slice(continuation.length))));
+    for (const reference of task.references ?? []) {
+      lines.push(...wrap(`↳ ${clean(reference.asset)}: ${clean(reference.parts)}`, width, continuation).map((line) => continuation + styles.dim(line.slice(continuation.length))));
+    }
   });
   return lines;
 }
