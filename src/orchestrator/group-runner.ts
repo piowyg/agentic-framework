@@ -2,7 +2,7 @@ import { enabledAxes } from '../config/review-axes.js';
 import { TIERS } from '../config/schema.js';
 import { errorMessage } from '../errors.js';
 import { parseImplement } from '../contracts/index.js';
-import { groupAcceptance, taskTier, type Group, type Task } from './artifacts.js';
+import { groupAcceptance, groupReferences, taskReferences, taskTier, type Group, type Task } from './artifacts.js';
 import { BranchChain, type ChainSource } from './branch-chain.js';
 import type { CheckRun } from './checks.js';
 import { CloneWork } from './clone-work.js';
@@ -82,6 +82,7 @@ export class GroupRunner {
       state: groupState,
       axes: enabledAxes(config.review),
       acceptance: groupAcceptance(group),
+      references: groupReferences(group),
       fixer: fixExecutor(config, groupExecutor(config, group), catalog),
       work,
       notes: () => [...verificationNotes(config.review.checks, knownRed(this.flow.state)), ...(groupState.write_tests?.warnings ?? [])],
@@ -154,7 +155,7 @@ export class GroupRunner {
           cleanHandOver: true,
           skipChecks: !!partial,
           verify: (head, _implemented, logPath) => (partial ? partial.verify(head, logPath) : tests.frozenProblem(head)),
-          scope: { group: group.id, task: task.id, taskTitle: task.title, acceptance: task.acceptance, flowFiles, ...(extra && { extra }) },
+          scope: { group: group.id, task: task.id, taskTitle: task.title, acceptance: task.acceptance, references: taskReferences(group, task), flowFiles, ...(extra && { extra }) },
           ...(resume && { resume }),
         });
         reporter = undefined;

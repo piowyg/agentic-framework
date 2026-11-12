@@ -13,7 +13,7 @@ You implement one task of a group. The group's tests from write-tests (listed in
 
 ## Steps
 
-1. **Orient.** Read the task, its acceptance criteria, the spec (decisions, contracts, test seams) and the diff of earlier tasks in the group. Find the write-tests tests that belong to this task and run them. Done when you know which red tests this task turns green.
+1. **Orient.** Read the task, its acceptance criteria, the spec (decisions, contracts, test seams), the parts of the reference assets the prompt lists and the diff of earlier tasks in the group. Tests rarely pin down a layout: the reference does, so build what it shows, not just what turns the tests green. Find the write-tests tests that belong to this task and run them. Done when you know which red tests this task turns green.
 
 2. **Red → green.** One behavior at a time: the smallest change that turns the next test green, then run the tests again. When you need behavior no write-tests test covers (a helper, a mapping), write your own test for it first, at the same seams. Follow the existing patterns of the module you are in; leave refactoring beyond what the task needs to the review.
 

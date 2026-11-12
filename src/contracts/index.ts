@@ -136,7 +136,7 @@ function stageContractText(kind: SessionKind, context: ContractContext): string[
         '- `Affected repos` is a bullet list of repo names (`- .` for the current repo only).',
         '- `Test seams` lists the public interfaces the tests go through, agreed with the human.',
         '- Optionally `## Slices`: the order the change is built in — a prefactor first when one makes the change easier, then thin vertical slices of behavior, each ending in behavior an acceptance criterion describes. It orders the work and does not split the ticket; the breakdown cuts groups along it.',
-        `- \`${EXTERNAL_ASSETS}\` lists, one bullet each, what the change needs from outside the repo — a file to download (font, image, data, binary) or a dependency the repo doesn't have yet — with where it comes from and how it gets there, as agreed with the human: they add it to the repo before implementation, or its host is in \`sandbox.network.allow\`. The sessions after the spec run unattended in a sandbox: a download from anywhere else fails and stops the task.`,
+        `- \`${EXTERNAL_ASSETS}\` lists, one bullet each, what the change needs from outside the repo — a file to download (font, image, data, binary), a dependency the repo doesn't have yet, or reference material the result must match (a prototype, a design; give its path) — with where it comes from and how it gets there, as agreed with the human: they add it to the repo before implementation, or its host is in \`sandbox.network.allow\`. The sessions after the spec run unattended in a sandbox: a download from anywhere else fails and stops the task.`,
       ];
     case 'breakdown':
       return [
@@ -151,18 +151,24 @@ function stageContractText(kind: SessionKind, context: ContractContext): string[
         '    depends_on: []',
         '    estimate: { prod: 0, tests: 0 }   # lines the diff will add + delete: production (docs included) and tests',
         '    oversize_reason: …     # only over a threshold: why the group stays whole',
+        `    references:            # parts of a \`## ${EXTERNAL_ASSETS}\` entry the group must match; omit when none applies`,
+        '      - asset: …           # the path or URL exactly as the spec writes it',
+        '        parts: …           # which parts: screen or section names, line ranges, functions',
+        '        match: …           # what the change must match there, in a sentence or two',
         '    tasks:',
         '      - id: t1',
         '        title: …',
         `        summary: …         # a short title ${humanLanguage}, shown at the gate above \`title\``,
         '        tier: standard     # mechanical | standard | domain | design',
         '        acceptance: [AC-1]',
+        '        references: []     # optional: parts only this task needs, same shape',
         '```',
         `- 1–${MAX_GROUP_TASKS} tasks per group (3–5 recommended); every AC of the ticket is covered by a task.`,
         `- Every group has an \`estimate\`; lockfiles and generated files don't count. \`oversize_reason\` is required when it is over ${context.size ? `${context.size.prod} production lines or ${context.size.total} with tests` : 'a `publish.size` threshold'}: cut a thinner slice (fewer criteria per group) before you reach for it, never a layer.`,
         ...(context.stack
           ? ['- The groups of one repo form a chain: one first group, every next one has the one before in `depends_on` (it may also depend on groups of other repos). Each group becomes a pull request on top of the one before; groups run side by side only across repos.']
           : []),
+        `- Read every \`## ${EXTERNAL_ASSETS}\` entry the work must look or behave like (a prototype, a design, a sample file, an API document) in full. Each group that builds part of one lists it under \`references\`, precise enough that a session reads only those parts: the sessions after you see the asset only through them. A download or a dependency needs no reference.`,
         `- More than ${OVERSIZED_GROUPS} groups is allowed but flagged as oversized — prefer suggesting a smaller ticket.`,
         '- Quote a value that contains ` #` (e.g. `"moves to #10"`): unquoted, YAML drops the rest as a comment.',
       ];

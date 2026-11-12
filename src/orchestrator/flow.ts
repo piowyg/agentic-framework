@@ -15,6 +15,9 @@ import {
   parseTasks,
   breakdownRules,
   chainProblems,
+  groupReferences,
+  referenceProblems,
+  unreferencedAssets,
   type BreakdownRules,
   topoOrder,
   validateSpec,
@@ -297,6 +300,7 @@ class FlowRunner {
       state: finalState,
       axes: [['final', config.review.final]],
       acceptance: [],
+      references: this.approvedTasks().groups.flatMap(groupReferences),
       fixer: fixExecutor(config, featureExecutor(config, this.approvedTasks().groups), catalog),
       work,
       base,
@@ -435,6 +439,8 @@ class FlowRunner {
     if (outsideSpec.length) {
       throw new ArtifactError('tasks.yaml', outsideSpec.map((group) => `${group.id}: repo \`${group.repo}\` is not in \`## Affected repos\` in spec.md`));
     }
+    const unknownAssets = referenceProblems(tasks.groups, this.externalAssets());
+    if (unknownAssets.length) throw new ArtifactError('tasks.yaml', unknownAssets);
     for (const group of tasks.groups) {
       for (const task of group.tasks) taskExecutor(this.context.config, group, task, this.context.catalog);
       fixExecutor(this.context.config, groupExecutor(this.context.config, group), this.context.catalog);
@@ -465,6 +471,11 @@ class FlowRunner {
     return groupState;
   }
 
+  /** `## External assets` of the spec; none without one. */
+  private externalAssets(): string[] {
+    return fs.existsSync(path.join(this.context.workDir, 'spec.md')) ? this.spec().externalAssets : [];
+  }
+
   private spec(grill?: GrillAsks): Spec {
     return validateSpec(this.flow.read('spec.md'), (name) => resolveRepo(name, this.state.origin), grill);
   }
@@ -488,9 +499,16 @@ class FlowRunner {
           `${group.id} (${group.repo}${group.depends_on.length ? `, after ${group.depends_on.join(', ')}` : ''}${group.estimate ? `, ~${linesText(group.estimate.prod, group.estimate.tests)}` : ''}): ${group.summary ?? group.title ?? ''}\n` +
           (group.oversize_reason ? `  over the threshold because: ${group.oversize_reason}\n` : '') +
           `  why this way: ${group.rationale}\n` +
-          group.tasks.map((task) => `  - ${task.id} [${task.tier ?? '-'}] ${task.summary ?? task.title} ${task.acceptance.join(' ')}`).join('\n'),
+          (group.references ?? []).map((reference) => `  ↳ ${reference.asset}: ${reference.parts}\n`).join('') +
+          group.tasks
+            .map((task) => [`  - ${task.id} [${task.tier ?? '-'}] ${task.summary ?? task.title} ${task.acceptance.join(' ')}`, ...(task.references ?? []).map((reference) => `      ↳ ${reference.asset}: ${reference.parts}`)].join('\n'))
+            .join('\n'),
       );
-      const warnings = [...tasks.warnings, ...this.brokenChain(tasks)];
+      // an asset nobody references is never read again after the breakdown (biolchemlab pilot: a prototype ignored by every session)
+      const unreferenced = unreferencedAssets(tasks.groups, this.externalAssets()).map(
+        (asset) => `external asset no group references (fine for a download or a dependency; a design or behaviour source needs \`references\`): ${asset}`,
+      );
+      const warnings = [...tasks.warnings, ...this.brokenChain(tasks), ...unreferenced];
       return {
         text: [...warnings.map((warning) => `⚠ ${warning}`), ...groups].join('\n'),
         view: {

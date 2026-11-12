@@ -4,7 +4,7 @@ import type { AgenticConfig } from '../config/types.js';
 import { parseWriteTests } from '../contracts/index.js';
 import type { WriteTestsArtifact } from '../contracts/schemas.js';
 import { writeFileSafe } from '../fsutil.js';
-import { groupAcceptance, taskTier, type Group, type Task } from './artifacts.js';
+import { groupAcceptance, groupReferences, taskTier, type Group, type Task } from './artifacts.js';
 import type { CloneWork } from './clone-work.js';
 import { stageExecutor } from './executors.js';
 import { hostGit, resolveRepo } from './repos.js';
@@ -238,7 +238,7 @@ export class GroupTests {
       kind: 'write-tests',
       executor: stageExecutor(config, 'write-tests', catalog),
       label: run.label,
-      scope: { group: group.id, acceptance },
+      scope: { group: group.id, acceptance, references: groupReferences(group) },
       parse: (text) => parseWriteTests(text, acceptance),
       skipChecks: true,
       ...(run.resume && { resume: run.resume }),

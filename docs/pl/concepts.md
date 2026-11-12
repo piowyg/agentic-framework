@@ -58,6 +58,12 @@ Orkiestrator sprawdza artefakt (format, ID AC) i dopiero wtedy pokazuje bramkę.
   został szacunek (albo dwa razy szacunek już ponad progiem), mówią o tym log, `group_done` i `agentic status` (ostrzeżenie, nic się nie zatrzymuje).
   Grill techniczny może zapisać kolejność pracy w sekcji `## Slices` specu:
   najpierw prefactor, potem cienkie pionowe kawałki.
+- **Referencje** wiążą pracę z materiałem z sekcji `## External assets` specu, do którego wynik ma pasować (klikalny
+  prototyp, projekt, przykładowy plik). Breakdown czyta każdy w całości i zapisuje per grupa lub task, które części
+  obejmuje i co ma się zgadzać (`references: [{ asset, parts, match }]`). write-tests, implement i fix dostają te
+  części w prompcie do przeczytania przed startem; review spec i review końcowe porównują z nimi zmianę, a ekran, który
+  ignoruje swoją referencję, to blokujące znalezisko. Referencja do assetu spoza specu cofa plan; asset, do którego
+  nie odwołuje się żadna grupa, to ostrzeżenie na bramce breakdown.
 - Przy `publish.stack` (domyślnie włączone) grupy jednego repo tworzą **łańcuch**: jedna pierwsza, każda następna
   zależy od poprzedniej, więc każdy PR może leżeć na poprzednim. Grupy z różnych repo idą równolegle, gdy
   `parallel_groups` > 1. Przy `publish.stack: false` równolegle idą też niezależne grupy jednego repo.

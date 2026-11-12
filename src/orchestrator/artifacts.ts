@@ -190,7 +190,22 @@ export interface Task {
   summary?: string;
   tier?: Tier;
   acceptance: string[];
+  /** Parts of the spec's external assets this task must match, on top of its group's. */
+  references?: AssetReference[];
   executor?: Partial<Executor>;
+}
+
+/**
+ * A part of an asset from the spec's `## External assets` (a prototype, a sample, an API document) the work must
+ * match. The breakdown reads the asset once and names the parts, so later sessions read only those.
+ */
+export interface AssetReference {
+  /** The path or URL as `## External assets` writes it. */
+  asset: string;
+  /** Which parts the work covers: screens, sections, line ranges, functions. */
+  parts: string;
+  /** What the change must match there. */
+  match: string;
 }
 
 export interface Group {
@@ -208,6 +223,8 @@ export interface Group {
   oversize_reason?: string;
   /** Defaults to the most common task tier. */
   tier?: Tier;
+  /** Parts of the spec's external assets the whole group must match. */
+  references?: AssetReference[];
   tasks: Task[];
 }
 
@@ -237,6 +254,16 @@ export interface TasksFile {
   warnings: string[];
 }
 
+const referencesSchema = {
+  type: 'array',
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['asset', 'parts', 'match'],
+    properties: { asset: { type: 'string', minLength: 1 }, parts: { type: 'string', minLength: 1 }, match: { type: 'string', minLength: 1 } },
+  },
+};
+
 const tasksSchema = {
   type: 'object',
   additionalProperties: false,
@@ -265,6 +292,7 @@ const tasksSchema = {
           },
           oversize_reason: { type: 'string' },
           tier: { enum: [...TIERS] },
+          references: referencesSchema,
           tasks: {
             type: 'array',
             minItems: 1,
@@ -279,6 +307,7 @@ const tasksSchema = {
                 summary: { type: 'string' },
                 tier: { enum: [...TIERS] },
                 acceptance: { type: 'array', items: { type: 'string', pattern: '^AC-\\d+$' } },
+                references: referencesSchema,
                 executor: executorSchema,
               },
             },
@@ -410,6 +439,39 @@ export function chainProblems(groups: Group[], repoKey: (name: string) => string
     }
   }
   return problems;
+}
+
+/** What a task's sessions read: its group's references, then its own. */
+export function taskReferences(group: Group, task: Task): AssetReference[] {
+  return uniqueReferences([...(group.references ?? []), ...(task.references ?? [])]);
+}
+
+/** What the group's test author and reviewers read: its own references and every task's. */
+export function groupReferences(group: Group): AssetReference[] {
+  return uniqueReferences([...(group.references ?? []), ...group.tasks.flatMap((task) => task.references ?? [])]);
+}
+
+function uniqueReferences(references: AssetReference[]): AssetReference[] {
+  const seen = new Set<string>();
+  return references.filter((reference) => {
+    const key = JSON.stringify([reference.asset, reference.parts, reference.match]);
+    return !seen.has(key) && seen.add(key);
+  });
+}
+
+/** References whose asset `## External assets` doesn't list: the sessions would read a file nobody agreed on. */
+export function referenceProblems(groups: Group[], externalAssets: string[]): string[] {
+  return groups.flatMap((group) =>
+    [...new Set(groupReferences(group).map((reference) => reference.asset))]
+      .filter((asset) => !externalAssets.some((bullet) => bullet.includes(asset)))
+      .map((asset) => `${group.id}: reference \`${asset}\` is not in \`## ${EXTERNAL_ASSETS}\` of spec.md`),
+  );
+}
+
+/** `## External assets` bullets no reference points at: fine for a download, a gap for a design or behaviour source. */
+export function unreferencedAssets(groups: Group[], externalAssets: string[]): string[] {
+  const assets = groups.flatMap((group) => groupReferences(group).map((reference) => reference.asset));
+  return externalAssets.filter((bullet) => !assets.some((asset) => bullet.includes(asset)));
 }
 
 /** Acceptance criteria of a group's tasks, in first-seen order. */

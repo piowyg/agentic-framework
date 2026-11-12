@@ -15,7 +15,7 @@ import { hostAccess, hostNetwork } from '../sandbox/host-policy.js';
 import type { SessionWorkspace } from '../sandbox/types.js';
 import { sessionSkills, skillDirName, skillHashes, stageSkills } from '../skills/stage.js';
 import { PACKAGE_ROOT } from '../paths.js';
-import { APPROVED_TICKET, ArtifactError, breakdownRules, contextArtifacts, parseMarkdown, STAGE_ARTIFACTS, validateTicket } from './artifacts.js';
+import { APPROVED_TICKET, ArtifactError, breakdownRules, contextArtifacts, parseMarkdown, STAGE_ARTIFACTS, validateTicket, type AssetReference } from './artifacts.js';
 import { BudgetGuard } from './budget.js';
 import { parseDuration, writeChecksRunner } from './checks.js';
 import type { GateKeeper } from './gatekeeper.js';
@@ -35,6 +35,8 @@ export interface SessionScope {
   label?: string;
   /** Acceptance criteria in scope: named in the prompt, and the spec axis must cover each. */
   acceptance?: string[];
+  /** Parts of the spec's external assets the session reads before it starts; named in the prompt. */
+  references?: AssetReference[];
   /** Appended to the prompt (e.g. the fixer's blocking findings). */
   extra?: string;
   /** Where the session runs; defaults to the group's clone, outside a group to the origin repo. */
@@ -483,7 +485,7 @@ export class SessionRunner {
   async review(
     axis: ScopeAxis,
     executor: Executor,
-    scope: Pick<SessionScope, 'group' | 'round' | 'cwd' | 'acceptance' | 'flowFiles' | 'extra'> & { frozen?: FrozenScope },
+    scope: Pick<SessionScope, 'group' | 'round' | 'cwd' | 'acceptance' | 'references' | 'flowFiles' | 'extra'> & { frozen?: FrozenScope },
     read: Evidence['read'],
   ): Promise<ReviewReport> {
     const kind = `review-${axis}` as const;
