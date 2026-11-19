@@ -45,7 +45,7 @@
     "picomatch": "^4.0.7",
     "semver": "^7.8.6",
     "smol-toml": "^1.9.1",
-    "typebox": "^1.4.6",
+    "typebox": "^1.4.7",
     "yaml": "^2.9.1"
   },
   "devDependencies": {
